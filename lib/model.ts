@@ -19,8 +19,10 @@
 //      diminishing returns, and never below a floor for the young.
 //   4. Product honesty. A wrapped, staked or bridged product of an asset that already trades
 //      (the snapshot's own telltales: its name and category) is not a launch waiting to happen —
-//      its value accrues to the parent asset. Such rows are flagged and discounted hard, so the
-//      top of the board is protocols with a launch of their own ahead of them.
+//      its value accrues to the parent asset. Such rows are flagged and cut to a twentieth
+//      (x0.05): at a fifth, the largest bridges still held ranks 4-9 on raw TVL alone, above
+//      genuine launch candidates a twentieth of their size; at a twentieth they stay visible
+//      and flagged without crowding the top of the board.
 //
 // No protocol name is ever special-cased: the same functions score every row, and the dashboard
 // shows each row's full breakdown so a reader can disagree with any factor.
@@ -68,7 +70,7 @@ export interface ModelConstants {
 export const MODEL: ModelConstants = {
   multiple_floor: 0.03,
   multiple_cap: 2.0,
-  peer_shrink_k: 4,
+  peer_shrink_k: 8,
   momentum_weight: 0.3,
   momentum_floor_pct: -60,
   momentum_cap_pct: 120,
@@ -78,10 +80,10 @@ export const MODEL: ModelConstants = {
   unknown_age_days: 365,
   chain_step: 0.015,
   chain_max_extra: 8,
-  product_factor: 0.2,
+  product_factor: 0.05,
 };
 
-export const MODEL_VERSION = 'peerdesk-2';
+export const MODEL_VERSION = 'peerdesk-3';
 
 /** How many already-trading protocols the dashboard's trading view carries, by market cap. */
 export const LIVE_ROWS = 30;
@@ -176,7 +178,11 @@ export function peerTable(snapshot: Snapshot): PeerTable {
     const med = median(list)!;
     const n = list.length;
     // Shrink a thin category toward the global median with weight n / (n + k): one peer is a
-    // fifth of the word, four peers are half, and a deep category mostly speaks for itself.
+    // ninth of the word, eight peers are half, and a deep category mostly speaks for itself.
+    // The stronger shrink matters: several categories have a single trading peer whose ratio
+    // sits at the winsorized cap, and at k = 4 that one outlier priced the whole top of the
+    // board (Risk Curators at 0.57x against a 0.21x global median); at k = 8 it still leads
+    // its category, but no longer dictates it.
     const w = n / (n + MODEL.peer_shrink_k);
     const shrunk = w * med + (1 - w) * global;
     by_category.set(category, { multiple: clamp(shrunk, MODEL.multiple_floor, MODEL.multiple_cap), peers: n });
