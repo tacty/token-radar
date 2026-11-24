@@ -56,10 +56,10 @@
 
   function methodHtml() {
     return '<section class="method"><h2>How this board prices a launch that has not happened</h2><ol>' +
-      '<li><b>Peer multiple.</b> Each category of already-trading protocols gives a median market-cap / TVL; a pre-token protocol inherits its own category\u2019s, shrunk toward the global median of ' + R.global_multiple.toFixed(2) + '\u00d7 when peers are few, with single ratios winsorized so one outlier prices nobody.</li>' +
+      '<li><b>Peer multiple.</b> Each category of already-trading protocols gives a median market-cap / TVL; a pre-token protocol inherits its own category\u2019s, shrunk toward the global median of ' + R.global_multiple.toFixed(2) + '\u00d7 when peers are few \u2014 a lone peer counts for a ninth of the word, eight peers for half \u2014 with single ratios winsorized so one outlier prices nobody.</li>' +
       '<li><b>Momentum.</b> The 7-day TVL change tilts the peer value by up to \u00b130%: money flowing in is worth more than the same TVL standing still.</li>' +
       '<li><b>Track record.</b> Years of held TVL with no token count for up to +28%: a launch is likelier to be priced seriously from a protocol that has already lasted.</li>' +
-      '<li><b>Product honesty.</b> Wrapped, staked and bridged products of assets that already trade are flagged and cut to a fifth: their value accrues to the parent asset, not to a launch of their own.</li>' +
+      '<li><b>Product honesty.</b> Wrapped, staked and bridged products of assets that already trade are flagged and cut to a twentieth (\u00d70.05): their value accrues to the parent asset, not to a launch of their own, and at any gentler cut their raw TVL alone would crowd genuine candidates off the top of the board.</li>' +
       '</ol><p class="formula">implied = TVL \u00d7 peer multiple \u00d7 momentum \u00d7 track record \u00d7 footprint \u00d7 product factor \u00b7 every factor is printed on each protocol\u2019s detail page</p></section>';
   }
 
@@ -166,11 +166,13 @@
     if (r.product) rows.push(['Product factor — wrapped / staked product of a trading asset', '\u00d7 ' + m.product_factor.toFixed(2)]);
     var breakdown = rows.map(function (x) { return '<tr><td>' + x[0] + '</td><td class="num">' + x[1] + '</td></tr>'; }).join('') +
       '<tr class="total"><td>Implied value if it launched at these prices</td><td class="num">' + fmtUsd(r.implied_value_usd) + '</td></tr>';
+    var atGlobal = Math.round(r.tvl_usd * R.global_multiple * m.momentum_factor * m.track_factor * m.footprint_factor * m.product_factor);
+    var sens = '<p class="note">Sensitivity: priced at the global median multiple of ' + R.global_multiple.toFixed(2) + '\u00d7 instead of its own category\u2019s ' + m.peer_multiple.toFixed(2) + '\u00d7, this row would imply about ' + fmtUsd(atGlobal) + '. The gap between the two figures is exactly what the category\u2019s peer evidence adds \u2014 or, for a category priced below the median, takes away.</p>';
     var plan = r.farm_plan.map(function (s) {
       return '<li><span class="act">' + esc(s.action) + '</span><span class="chips"><span class="chip">Cost <b>' + esc(s.cost) + '</b></span><span class="chip">Time <b>' + esc(s.time) + '</b></span></span></li>';
     }).join('');
     var note = r.product
-      ? '<p class="note">This record is a wrapped, staked or bridged product of an asset whose token already trades. The board keeps it visible and flagged rather than pretending it is a launch candidate: any value a program attached to it would most likely arrive through the parent asset, and its implied value is cut to a fifth for exactly that reason.</p>'
+      ? '<p class="note">This record is a wrapped, staked or bridged product of an asset whose token already trades. The board keeps it visible and flagged rather than pretending it is a launch candidate: any value a program attached to it would most likely arrive through the parent asset, and its implied value is cut to a twentieth for exactly that reason.</p>'
       : (r.on_watchlist
         ? '<p class="note">On the snapshot\u2019s watchlist: at or above the $50M floor, recording no token, and not a wrapped or staked product of one that trades. The board ranks it on the same formula as every other row — no hand-tuning.</p>'
         : '<p class="note">An early find: below the watchlist\u2019s $50M floor, which is a floor and never a ceiling. The radar exists to surface rows like this one while they are still cheap to farm.</p>');
@@ -178,7 +180,7 @@
       '<h2>' + esc(r.name) + badges(r) + '</h2>' +
       '<p class="sub">Rank #' + r.rank + ' of ' + R.board_size + ' \u00b7 ' + esc(r.category || 'Uncategorised') + ' \u00b7 ' + esc(r.chains.join(', ') || 'no chains recorded') + ' \u00b7 tracked since ' + esc(r.listed_at || 'an unrecorded date') + '</p>' +
       '<div class="dgrid">' + cells + '</div>' + note +
-      '<h3>How the implied value is built</h3><table class="breakdown">' + breakdown + '</table>' +
+      '<h3>How the implied value is built</h3><table class="breakdown">' + breakdown + '</table>' + sens +
       '<h3>The farm plan</h3><ol class="plan">' + plan + '</ol></section>';
   }
 
